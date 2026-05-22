@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
         const participantsList = details.participants
-          .map(email => `<li>${email}</li>`)
+          .map(email => `<li data-email="${email}" data-activity="${name}"><button class="delete-btn" aria-label="Remove ${email} from activity">✕</button> ${email}</li>`)
           .join("");
 
         activityCard.innerHTML = `
@@ -35,6 +35,45 @@ document.addEventListener("DOMContentLoaded", () => {
             </ul>
           </div>
         `;
+
+        // Attach delete handlers
+        activityCard.querySelectorAll(".delete-btn").forEach(btn => {
+          btn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            const li = btn.closest("li");
+            const email = li.getAttribute("data-email");
+            const activity = li.getAttribute("data-activity");
+            
+            try {
+              const response = await fetch(
+                `/activities/${encodeURIComponent(activity)}/withdraw?email=${encodeURIComponent(email)}`,
+                { method: "DELETE" }
+              );
+              
+              if (response.ok) {
+                messageDiv.textContent = `Successfully withdrew ${email} from ${activity}`;
+                messageDiv.className = "success";
+                messageDiv.classList.remove("hidden");
+                
+                // Refresh activities
+                setTimeout(() => {
+                  messageDiv.classList.add("hidden");
+                  fetchActivities();
+                }, 2000);
+              } else {
+                const result = await response.json();
+                messageDiv.textContent = result.detail || "Failed to withdraw";
+                messageDiv.className = "error";
+                messageDiv.classList.remove("hidden");
+              }
+            } catch (error) {
+              messageDiv.textContent = "Failed to withdraw. Please try again.";
+              messageDiv.className = "error";
+              messageDiv.classList.remove("hidden");
+              console.error("Error withdrawing:", error);
+            }
+          });
+        });
 
         activitiesList.appendChild(activityCard);
 
